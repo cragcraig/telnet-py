@@ -18,7 +18,15 @@ def main():
     port = int(sys.argv[1])
 
   serv = server.Server(port)
-  serv.accept()
+  while True:
+    serv.poll(-1)
+    for c in serv.clients():
+      buf = serv.readline(c)
+      if 'quit' in buf:
+        serv.disconnect(c)
+      else:
+        serv.write(c, buf)
+
 
 if __name__ == "__main__":
   main()
