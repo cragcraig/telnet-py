@@ -70,7 +70,7 @@ class Server:
       if event & select.EPOLLHUP:
         self.epoll.unregister(fileno)
         self._clients[fileno].connection.close()
-        print('%s left' % self._clients[fileno].addr[0])
+        print('%s disconnected' % self._clients[fileno].addr[0])
         del self._clients[fileno]
 
   def write(self, fileno, text):
