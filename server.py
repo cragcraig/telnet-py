@@ -2,8 +2,8 @@ import select
 import socket
 
 
-class Connection:
-
+class Connection(object):
+  """A single client connection."""
   def  __init__(self, connection, addr):
     self.connection = connection
     self.addr = addr
@@ -11,8 +11,8 @@ class Connection:
     self.writebuf = ''
 
 
-class Server:
-
+class Server(object):
+  """Handles all socket connections."""
   def __init__(self, port, backlog=20):
     self._clients = {}
     self.serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
