@@ -2,24 +2,19 @@ import signal
 import sys
 import argparse
 
+import login_manager
 import server
 
 def sigint_handler(signal, frame):
-  print("SIGINT")
+  print("[ SIGINT received, exiting ]")
   sys.exit(0)
 
 def launch_server(port):
   # Launch server.
   serv = server.Server(port)
+  manager = login_manager.LoginManager(serv)
   while True:
     serv.poll()
-    for c in serv.clients():
-      buf = serv.readline(c)
-      if 'quit' in buf:
-        serv.disconnect(c)
-      else:
-        serv.write(c, buf)
-
 
 if __name__ == "__main__":
   signal.signal(signal.SIGINT, sigint_handler)
