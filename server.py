@@ -13,17 +13,26 @@ class Connection(object):
     self.writebuf_out = ''
     self.read_queue = []
 
+  def __hash__(self):
+    return self.connection.fileno()
+
+  def __eq__(self, other):
+    return self.__hash__() == other.__hash__()
+
+  def __ne__(self, other):
+    return not self.__eq__(other)
+
   def append_read(self, text):
     """Add some text to the read buffer."""
     self._readbuf += text
     while '\n' in self._readbuf:
       i = self._readbuf.find('\n')
-      self.read_queue.append(self._readbuf[:i+1])
+      self.read_queue.append(self._readbuf[:i+1].strip('\r\n '))
       self._readbuf = self._readbuf[i+1:]
 
-  def write(self, text):
+  def write(self, text, end='\n'):
     """Write some text to the connection."""
-    self._writebuf += text
+    self._writebuf += text + end
     while '\n' in self._writebuf:
       i = self._writebuf.find('\n')
       self.writebuf_out += self._writebuf[:i+1]
@@ -35,6 +44,11 @@ class Connection(object):
     self.writebuf_out += self._writebuf
     self._writebuf = ''
     self._server.request_write(self.connection.fileno())
+
+  def prompt(self, prompt):
+    """Write a prompt to writebuf."""
+    self.write(prompt, end='')
+    self.flush()
 
   def readline(self):
     """Get a line that received by the connection."""
@@ -67,7 +81,7 @@ class Server(object):
     self.serv.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     self.epoll = select.epoll()
     self.epoll.register(self.serv, select.EPOLLIN | select.EPOLLET)
-    print('listening on port %d' % port)
+    print('listening on port %d.' % port)
 
   def add_listener(self, listener):
     if listener not in self._listeners:
@@ -78,12 +92,6 @@ class Server(object):
       self._listeners.remove(listener)
     except ValueError:
       pass
-
-  def accept(self):
-    conn, addr = self.serv.accept()
-    print('connected to %s:%s' % (addr[0],addr[1]))
-    conn.close()
-    self.serv.close()
 
   def poll(self, timeout=-1):
     events = self.epoll.poll(timeout)
@@ -96,7 +104,7 @@ class Server(object):
             conn.setblocking(0)
             conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.epoll.register(conn, select.EPOLLIN | select.EPOLLET)
-            print('%s joined on port %s' % (addr[0], addr[1]))
+            print('%s connected on port %s.' % (addr[0], addr[1]))
             connection = Connection(conn, addr, self)
             self._clients[conn.fileno()] = connection
             for li in self._listeners:
@@ -130,7 +138,7 @@ class Server(object):
       if event & select.EPOLLHUP:
         self.epoll.unregister(fileno)
         self._clients[fileno].connection.close()
-        print('%s disconnected' % self._clients[fileno].addr[0])
+        print('%s disconnected.' % self._clients[fileno].addr[0])
         for li in self._listeners:
           li.on_disconnected(connection)
         del self._clients[fileno]
@@ -146,16 +154,19 @@ class Server(object):
       self._to_disconnect.append(fileno)
 
   def _disconnect_pending(self):
-    while self._to_disconnect:
-      self._disconnect_internal(self._to_disconnect.pop())
+    for fileno in self._to_disconnect[:]:
+      if fileno not in self._clients:
+        self._to_disconnect.remove(fileno)
+      elif len(self._clients[fileno].writebuf_out) == 0:
+        self._disconnect_internal(fileno)
+        self._to_disconnect.remove(fileno)
 
   def _disconnect_internal(self, fileno):
-    if fileno in self._clients:
-      self.epoll.modify(fileno, 0)
-      self._clients[fileno].connection.shutdown(socket.SHUT_RDWR)
-      for li in self._listeners:
-        li.on_disconnected(self._clients[fileno])
-      del self._clients[fileno]
+    self.epoll.modify(fileno, 0)
+    self._clients[fileno].connection.shutdown(socket.SHUT_RDWR)
+    for li in self._listeners:
+      li.on_disconnected(self._clients[fileno])
+    del self._clients[fileno]
 
   def iter_clients(self):
     return self._clients.iterkeys()

@@ -2,7 +2,8 @@ import signal
 import sys
 import argparse
 
-import login_manager
+import connection_manager
+import player
 import server
 
 def sigint_handler(signal, frame):
@@ -12,7 +13,8 @@ def sigint_handler(signal, frame):
 def launch_server(port):
   # Launch server.
   serv = server.Server(port)
-  manager = login_manager.LoginManager(serv)
+  players = player.ManyPlayers()
+  manager = connection_manager.ConnectionManager(serv, players)
   while True:
     serv.poll()
 
