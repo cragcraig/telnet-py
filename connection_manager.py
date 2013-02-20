@@ -5,7 +5,10 @@ import unknown_client
 
 
 class ConnectionManager(server_listener.ServerListener):
-  """Manages mapping connections to players."""
+  """Manages mapping connections to players.
+
+  This includes managing the login flow and executing commands.
+  """
   _PROMPT = '> '
 
   def __init__(self, server, many_players):

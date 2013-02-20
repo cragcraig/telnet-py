@@ -7,6 +7,8 @@ def _hash_password(password):
 
 class UnknownClient(object):
   """Represents the state of a non-logged in client."""
+  _TEST_PASSWORD = 'abc'
+
   def __init__(self, many_players):
     self.state = 'welcome'
     self.name = None
@@ -34,11 +36,11 @@ class UnknownClient(object):
         self.name = text
         if self._many_players.does_exist_by_name(self.name):
           self.state = 'password'
-          return self.update(connection, '')
+          return self.update(connection, UnknownClient._TEST_PASSWORD)
         else:
-          self._tmp_pass = ''
+          self._tmp_pass = UnknownClient._TEST_PASSWORD
           self.state = 'verify_newpassword'
-          return self.update(connection, '')
+          return self.update(connection, UnknownClient._TEST_PASSWORD)
       else:
         connection.prompt('pick a username: ')
         self.state = 'new'
@@ -75,9 +77,13 @@ class UnknownClient(object):
         connection.prompt('password: ')
         self.state = 'newpassword'
     elif self.state == 'newpassword':
-      self._tmp_pass = text
-      connection.prompt('password again: ')
-      self.state = 'verify_newpassword'
+      if len(text) < 3:
+        connection.write('Password is too short.')
+        connection.prompt('new password: ')
+      else:
+        self._tmp_pass = text
+        connection.prompt('password again: ')
+        self.state = 'verify_newpassword'
     elif self.state == 'verify_newpassword':
       if self._tmp_pass != text:
         connection.write('Passwords do not match')
