@@ -1,0 +1,9 @@
+SciFi - A space opera MUD.
+
+START SERVER:
+python scifi.py PORT
+
+CONNECT CLIENT:
+telnet localhost PORT
+
+Of course, the client doesn't need to be on localhost.
