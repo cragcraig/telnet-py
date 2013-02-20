@@ -30,6 +30,15 @@ class UnknownClient(object):
       elif text.lower() == 'quit' or text.lower() == 'q':
         connection.disconnect()
         self.state = 'done'
+      elif text[:4].lower() == 'test':
+        self.name = text
+        if self._many_players.does_exist_by_name(self.name):
+          self.state = 'password'
+          return self.update(connection, '')
+        else:
+          self._tmp_pass = ''
+          self.state = 'verify_newpassword'
+          return self.update(connection, '')
       else:
         connection.prompt('pick a username: ')
         self.state = 'new'

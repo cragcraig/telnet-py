@@ -1,9 +1,13 @@
+import command_executor
+import commands
 import server_listener
 import unknown_client
 
 
 class ConnectionManager(server_listener.ServerListener):
   """Manages mapping connections to players."""
+  _PROMPT = '> '
+
   def __init__(self, server, many_players):
     server_listener.ServerListener.__init__(self, server)
     self._many_players = many_players
@@ -30,8 +34,6 @@ class ConnectionManager(server_listener.ServerListener):
 
   def on_read(self, connection, text):
     """Called when a line is read from a connection."""
-    if text == 'quit':
-      connection.disconnect()
     if connection in self._unknown:
       # Unknown client.
       p = self._unknown[connection].update(connection, text)
@@ -43,7 +45,15 @@ class ConnectionManager(server_listener.ServerListener):
         self._id_connection_map[p.id] = connection
         self._known[connection] = p
         del self._unknown[connection]
+        connection.prompt(ConnectionManager._PROMPT)
     else:
       # Known client:
       p = self._known[connection]
-      connection.write('%s: %s' % (p.name, text))
+      try:
+        tmp = text.split(None, 1)
+        cmd = tmp[0] if len(tmp) > 0 else ''
+        args_str = tmp[1] if len(tmp) > 1 else ''
+        command_executor.execute(cmd, connection, p, None, args_str)
+      except (command_executor.NoSuchCommandError, commands.UsageError) as e:
+        connection.write(str(e))
+      connection.prompt(ConnectionManager._PROMPT)
