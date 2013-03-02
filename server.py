@@ -45,7 +45,7 @@ class Connection(object):
     self._writebuf = ''
     self._server.request_write(self.connection.fileno())
 
-  def prompt(self, prompt):
+  def prompt(self, prompt='> '):
     """Write a prompt to writebuf."""
     self.write(prompt, end='')
     self.flush()

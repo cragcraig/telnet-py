@@ -48,7 +48,7 @@ class ConnectionManager(server_listener.ServerListener):
         self._id_connection_map[p.id] = connection
         self._known[connection] = p
         del self._unknown[connection]
-        connection.prompt(ConnectionManager._PROMPT)
+        connection.prompt()
     else:
       # Known client:
       p = self._known[connection]
@@ -59,4 +59,4 @@ class ConnectionManager(server_listener.ServerListener):
         command_executor.execute(cmd, connection, p, None, args_str)
       except (command_executor.NoSuchCommandError, commands.UsageError) as e:
         connection.write(str(e))
-      connection.prompt(ConnectionManager._PROMPT)
+      connection.prompt()

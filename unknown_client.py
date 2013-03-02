@@ -15,6 +15,11 @@ class UnknownClient(object):
     self._tmp_pass = None
     self._many_players = many_players
 
+  def prompt(self, connection, text):
+    """Prompt user for input."""
+    connection.write(text)
+    connection.prompt()
+
   def update(self, connection, text=''):
     """Update the unknown client state.
 
@@ -23,11 +28,11 @@ class UnknownClient(object):
     """
     if self.state == 'welcome':
       connection.write('Connection to SciFi established...')
-      connection.prompt('Existing account (yes/no/quit): ')
+      self.prompt(connection, 'Existing account? yes/no')
       self.state = 'existing'
     elif self.state == 'existing':
       if text.lower() == 'yes' or text.lower() == 'y':
-        connection.prompt('name: ')
+        self.prompt(connection, 'Name:')
         self.state = 'user'
       elif text.lower() == 'quit' or text.lower() == 'q':
         connection.disconnect()
@@ -42,16 +47,16 @@ class UnknownClient(object):
           self.state = 'verify_newpassword'
           return self.update(connection, UnknownClient._TEST_PASSWORD)
       else:
-        connection.prompt('pick a username: ')
+        self.prompt(connection, 'Choose a username:')
         self.state = 'new'
     elif self.state == 'user':
       self.name = text
       if self._many_players.does_exist_by_name(self.name):
-        connection.prompt('password: ')
+        self.prompt(connection, 'Password:')
         self.state = 'password'
       else:
         connection.write('User %s does not exist.' % self.name)
-        connection.prompt('Existing account (yes/no/quit): ')
+        self.prompt(connection, 'Existing account? yes/no')
         self.state = 'existing'
     elif self.state == 'password':
       hash = _hash_password(text)
@@ -62,7 +67,7 @@ class UnknownClient(object):
       except (IndexError, ValueError) as e:
         connection.write('Error: %s' % e)
         self.state = 'existing'
-        connection.prompt('Existing account (yes/no/quit): ')
+        self.prompt(connection, 'Existing account? yes/no')
       else:
         connection.write('Welcome back %s.' % self.name)
         self.state = 'done'
@@ -71,23 +76,23 @@ class UnknownClient(object):
       self.name = text
       if self._many_players.does_exist_by_name(self.name):
         connection.write('That name is already in use.')
-        connection.prompt('pick a username: ')
+        self.prompt(connection, 'Choose a username:')
         self.state = 'new'
       else:
-        connection.prompt('password: ')
+        self.prompt(connection, 'Password: ')
         self.state = 'newpassword'
     elif self.state == 'newpassword':
       if len(text) < 3:
         connection.write('Password is too short.')
-        connection.prompt('new password: ')
+        self.prompt(connection, 'Choose a password:')
       else:
         self._tmp_pass = text
-        connection.prompt('password again: ')
+        self.prompt(connection, 'Enter password again:')
         self.state = 'verify_newpassword'
     elif self.state == 'verify_newpassword':
       if self._tmp_pass != text:
         connection.write('Passwords do not match')
-        connection.prompt('password: ')
+        self.prompt(connection, 'Password:')
         self.state = 'newpassword'
       elif self._many_players.does_exist_by_name(self.name):
         connection.write('That name is already in use.')
